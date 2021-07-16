@@ -1,5 +1,5 @@
 {
-    "name": "@integral/sor",
+    "name": "@balancer/sor",
     "version": "1.0.0",
     "license": "GPL-3.0-only",
     "main": "build/index.js",
