@@ -21,7 +21,7 @@
         "access": "public"
     },
     "files": [
-        "dist"
+        "build"
     ],
     "devDependencies": {
         "@ethersproject/wallet": "^5.4.0",
