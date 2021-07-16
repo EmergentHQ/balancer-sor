@@ -1,6 +1,14 @@
 import * as sor from '../src';
 import { BigNumber } from '../src/utils/bignumber';
-import { PoolPairData, Swap, SubGraphPools, DisabledToken } from '../src/types';
+import {
+    PoolPairData,
+    Swap,
+    SubGraphPools,
+    DisabledToken,
+    PoolDictionary,
+    Pools,
+    Pool,
+} from '../src/types';
 import { parsePoolPairData } from '../src/helpers';
 import {
     calcOutGivenIn,
@@ -14,15 +22,15 @@ import { expect, assert } from 'chai';
 import { getAddress } from '@ethersproject/address';
 
 export function getAmountOut(
-    Pools,
+    Pools: Pools,
     PoolAddr: string,
     TokenIn: string,
     TokenOut: string,
-    AmtIn
+    AmtIn: BigNumber
 ) {
     const swapPool = Pools.pools.find(p => p.id === PoolAddr);
 
-    let pool: PoolPairData = parsePoolPairData(swapPool, TokenIn, TokenOut);
+    let pool: PoolPairData = parsePoolPairData(swapPool!, TokenIn, TokenOut);
 
     const amtOut = calcOutGivenIn(
         pool.balanceIn,
@@ -37,15 +45,15 @@ export function getAmountOut(
 }
 
 export function getAmountIn(
-    Pools,
+    Pools: Pools,
     PoolAddr: string,
     TokenIn: string,
     TokenOut: string,
-    AmtIn
+    AmtIn: BigNumber
 ) {
     const swapPool = Pools.pools.find(p => p.id === PoolAddr);
 
-    let pool: PoolPairData = parsePoolPairData(swapPool, TokenIn, TokenOut);
+    let pool: PoolPairData = parsePoolPairData(swapPool!, TokenIn, TokenOut);
 
     const amtOut = calcInGivenOut(
         pool.balanceIn,
@@ -65,7 +73,7 @@ export function testSwapsExactIn(
     tokenOut: string,
     amountIn: BigNumber,
     totalAmtOut: BigNumber,
-    allPoolsNonZeroBalances
+    allPoolsNonZeroBalances: any
 ) {
     let totalOut = bnum(0);
     let totalIn = bnum(0);
@@ -74,27 +82,27 @@ export function testSwapsExactIn(
         if (swaps[i].length === 1) {
             assert.equal(swaps[i][0].tokenIn, tokenIn);
             assert.equal(swaps[i][0].tokenOut, tokenOut);
-            totalIn = totalIn.plus(swaps[i][0].swapAmount);
+            totalIn = totalIn.plus(swaps[i][0].swapAmount!);
             let amtOutFirstSequence = getAmountOut(
                 allPoolsNonZeroBalances,
                 swaps[i][0].pool,
                 swaps[i][0].tokenIn,
                 swaps[i][0].tokenOut,
-                bnum(swaps[i][0].swapAmount)
+                bnum(swaps[i][0].swapAmount!)
             );
             totalOut = totalOut.plus(amtOutFirstSequence);
         } else {
             assert.equal(swaps[i][0].tokenIn, tokenIn);
             assert.equal(swaps[i][1].tokenIn, swaps[i][0].tokenOut);
             assert.equal(swaps[i][1].tokenOut, tokenOut);
-            totalIn = totalIn.plus(swaps[i][0].swapAmount);
+            totalIn = totalIn.plus(swaps[i][0].swapAmount!);
 
             let amtOutFirstSequence = getAmountOut(
                 allPoolsNonZeroBalances,
                 swaps[i][0].pool,
                 swaps[i][0].tokenIn,
                 swaps[i][0].tokenOut,
-                bnum(swaps[i][0].swapAmount)
+                bnum(swaps[i][0].swapAmount!)
             );
             assert.equal(
                 swaps[i][1].swapAmount,
@@ -106,7 +114,7 @@ export function testSwapsExactIn(
                 swaps[i][1].pool,
                 swaps[i][1].tokenIn,
                 swaps[i][1].tokenOut,
-                bnum(swaps[i][1].swapAmount)
+                bnum(swaps[i][1].swapAmount!)
             );
             totalOut = totalOut.plus(amtOutSecondSequence);
         }
@@ -122,7 +130,7 @@ export function testSwapsExactOut(
     tokenOut: string,
     amountOut: BigNumber,
     totalAmtIn: BigNumber,
-    allPoolsNonZeroBalances
+    allPoolsNonZeroBalances: any
 ) {
     let totalOut = bnum(0);
     let totalIn = bnum(0);
@@ -131,13 +139,13 @@ export function testSwapsExactOut(
         if (swaps[i].length === 1) {
             assert.equal(swaps[i][0].tokenIn, tokenIn);
             assert.equal(swaps[i][0].tokenOut, tokenOut);
-            totalOut = totalOut.plus(swaps[i][0].swapAmount);
+            totalOut = totalOut.plus(swaps[i][0].swapAmount!);
             let amtInFirstSequence = getAmountIn(
                 allPoolsNonZeroBalances,
                 swaps[i][0].pool,
                 swaps[i][0].tokenIn,
                 swaps[i][0].tokenOut,
-                bnum(swaps[i][0].swapAmount)
+                bnum(swaps[i][0].swapAmount!)
             );
             totalIn = totalIn.plus(amtInFirstSequence);
         } else {
@@ -148,7 +156,7 @@ export function testSwapsExactOut(
                 swaps[i][1].pool,
                 swaps[i][1].tokenIn,
                 swaps[i][1].tokenOut,
-                swaps[i][1].swapAmount
+                bnum(swaps[i][1].swapAmount!)
             );
             assert.equal(
                 swaps[i][0].swapAmount,
@@ -156,14 +164,14 @@ export function testSwapsExactOut(
             ); // Amount out of first swap which is input to second swap
             assert.equal(swaps[i][1].tokenIn, swaps[i][0].tokenOut);
             assert.equal(swaps[i][1].tokenOut, tokenOut);
-            totalOut = totalOut.plus(swaps[i][1].swapAmount);
+            totalOut = totalOut.plus(swaps[i][1].swapAmount!);
 
             let amtInFirstSequence = getAmountIn(
                 allPoolsNonZeroBalances,
                 swaps[i][0].pool,
                 swaps[i][0].tokenIn,
                 swaps[i][0].tokenOut,
-                bnum(swaps[i][0].swapAmount)
+                bnum(swaps[i][0].swapAmount!)
             ); // Swap amount is amount out
 
             totalIn = totalIn.plus(amtInFirstSequence);
@@ -181,14 +189,14 @@ export function formatAndFilterPools(
 ) {
     let allTokens = [];
     let allTokensSet = new Set();
-    let allPoolsNonZeroBalances = { pools: [] };
+    let allPoolsNonZeroBalances: Pools = { pools: [] };
 
     for (let pool of allPools.pools) {
         // Build list of non-zero balance pools
         // Only check first balance since AFAIK either all balances are zero or none are:
         if (pool.tokens.length != 0) {
             if (pool.tokens[0].balance != '0') {
-                let tokens = [];
+                let tokens: string[] = [];
                 pool.tokensList.forEach(token => {
                     if (
                         !disabledTokens.find(
@@ -203,7 +211,7 @@ export function formatAndFilterPools(
                     allTokens.push(tokens.sort()); // Will add without duplicate
                 }
 
-                allPoolsNonZeroBalances.pools.push(pool);
+                allPoolsNonZeroBalances.pools.push(pool as any);
             }
         }
     }
@@ -249,13 +257,13 @@ export function filterPools(allPools: any) {
 }
 
 export function fullSwap(
-    allPoolsNonZeroBalances,
-    tokenIn,
-    tokenOut,
-    swapType,
-    noPools,
-    amount,
-    disabledTokens
+    allPoolsNonZeroBalances: any,
+    tokenIn: any,
+    tokenOut: any,
+    swapType: any,
+    noPools: any,
+    amount: any,
+    disabledTokens: any
 ): [Swap[][], BigNumber] {
     let poolsTokenIn, poolsTokenOut, directPools, hopTokens;
     [directPools, hopTokens, poolsTokenIn, poolsTokenOut] = sor.filterPools(
@@ -313,7 +321,7 @@ export function fullSwap(
     return [swaps, total];
 }
 
-export function alterPools(allPools: any) {
+export function alterPools(allPools: Pools) {
     for (let pool of allPools.pools) {
         if (pool.tokens.length != 0) {
             pool.tokens.forEach(token => {
@@ -325,7 +333,7 @@ export function alterPools(allPools: any) {
                 let balanceBn = scale(bnum(token.balance), token.decimals);
                 let newBalanceBn = bmul(balanceBn, changeBn);
                 newBalanceBn = scale(newBalanceBn, -token.decimals);
-                token.balance = newBalanceBn.toString();
+                token.balance = bnum(newBalanceBn.toString());
             });
         }
     }
@@ -337,13 +345,13 @@ export function alterPools(allPools: any) {
 // First array contains all tokens in direct pools containing tokenIn
 // Second array contains all tokens in multi-hop pools containing tokenIn
 export function getTokenPairsMultiHop(token: string, poolsTokensListSet: any) {
-    let poolsWithToken = [];
-    let poolsWithoutToken = [];
+    let poolsWithToken: any = [];
+    let poolsWithoutToken: any = [];
 
     let directTokenPairsSet = new Set();
 
     // If pool contains token add all its tokens to direct list
-    poolsTokensListSet.forEach((poolTokenList, index) => {
+    poolsTokensListSet.forEach((poolTokenList: any) => {
         if (poolTokenList.includes(token)) {
             poolsWithToken.push(poolTokenList);
         } else {
@@ -353,10 +361,10 @@ export function getTokenPairsMultiHop(token: string, poolsTokensListSet: any) {
 
     directTokenPairsSet = new Set([].concat(...poolsWithToken));
 
-    let multihopTokenPools = [];
+    let multihopTokenPools: any = [];
     let multihopTokenPairsSet = new Set();
 
-    poolsWithoutToken.forEach((pool, index) => {
+    poolsWithoutToken.forEach((pool: any) => {
         let intersection = [...pool].filter(x =>
             [...directTokenPairsSet].includes(x)
         );

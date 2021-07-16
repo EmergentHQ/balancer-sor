@@ -25,6 +25,7 @@
     "devDependencies": {
         "@ethersproject/wallet": "^5.4.0",
         "@types/chai": "^4.2.10",
+        "@types/isomorphic-fetch": "0.0.35",
         "@types/mocha": "^7.0.2",
         "@types/node": "^14.0.20",
         "chai": "^4.2.0",

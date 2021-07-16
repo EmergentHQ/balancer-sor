@@ -13,7 +13,7 @@ export async function getAllPoolDataOnChain(
     const customMultiAbi = require('./abi/customMulticall.json');
     const contract = new Contract(multiAddress, customMultiAbi, provider);
 
-    let addresses = [];
+    let addresses: string[][] = [];
     let total = 0;
 
     for (let i = 0; i < pools.pools.length; i++) {

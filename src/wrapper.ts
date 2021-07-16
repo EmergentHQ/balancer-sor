@@ -6,11 +6,15 @@ import {
     Swap,
     PoolDictionary,
     Path,
-    EffectivePrice,
+    Price,
     Pools,
+    TokenCost,
+    PoolsForPairsCache,
+    ProcessedDataCache,
 } from './types';
 import { bnum, scale } from './bmath';
 import * as sor from './index';
+import { POOLS } from './pools';
 
 export class SOR {
     provider: BaseProvider;
@@ -19,13 +23,13 @@ export class SOR {
     chainId: number;
     // avg Balancer swap cost. Can be updated manually if required.
     swapCost: BigNumber = new BigNumber('100000');
-    tokenCost = {};
+    tokenCost: TokenCost = {};
     onChainCache: Pools = { pools: [] };
-    poolsForPairsCache = {};
-    processedDataCache = {};
+    poolsForPairsCache: PoolsForPairsCache = {};
+    processedDataCache: ProcessedDataCache = {};
     isAllFetched: boolean = false;
     poolsUrl: string;
-    pools;
+    pools: POOLS;
 
     MULTIADDR: { [chainId: number]: string } = {
         1: '0x514053acec7177e277b947b1ebb5c08ab4c4580e',
@@ -50,7 +54,7 @@ export class SOR {
     /*
     Find and cache cost of token.
     */
-    async setCostOutputToken(TokenOut: string, Cost: BigNumber = null) {
+    async setCostOutputToken(TokenOut: string, Cost: BigNumber | null = null) {
         TokenOut = TokenOut.toLowerCase();
 
         if (Cost === null) {
@@ -174,7 +178,7 @@ export class SOR {
 
         let pools: PoolDictionary,
             paths: Path[],
-            epsOfInterest: EffectivePrice[],
+            epsOfInterest: Price[],
             marketSp: BigNumber;
         // If token pair has been processed before that info can be reused to speed up execution
         let cache = this.processedDataCache[`${TokenIn}${TokenOut}${SwapType}`];
@@ -295,14 +299,14 @@ export class SOR {
             );
 
             // Find paths and prices for swap types
-            let pathsExactIn: Path[], epsExactIn: EffectivePrice[];
+            let pathsExactIn: Path[], epsExactIn: Price[];
             [pathsExactIn, epsExactIn] = this.processPathsAndPrices(
                 JSON.parse(JSON.stringify(pathData)),
                 pools,
                 'swapExactIn'
             );
 
-            let pathsExactOut: Path[], epsExactOut: EffectivePrice[];
+            let pathsExactOut: Path[], epsExactOut: Price[];
             [pathsExactOut, epsExactOut] = this.processPathsAndPrices(
                 pathData,
                 pools,
@@ -315,7 +319,7 @@ export class SOR {
                 costOutputToken = new BigNumber(0);
             }
 
-            let allSwaps = [];
+            let allSwaps: Swap[][][] = [];
 
             let range = [
                 bnum('0.01'),
@@ -411,7 +415,7 @@ export class SOR {
     processPairPools(
         TokenIn: string,
         TokenOut: string,
-        poolsList
+        poolsList: Pools
     ): [PoolDictionary, Path[]] {
         // Retrieves intermediate pools along with tokens that are contained in these.
         let directPools: PoolDictionary,
@@ -458,12 +462,12 @@ export class SOR {
         PathArray: Path[],
         PoolsDict: PoolDictionary,
         SwapType: string
-    ): [Path[], EffectivePrice[], BigNumber] {
+    ): [Path[], Price[], BigNumber] {
         const paths: Path[] = sor.processPaths(PathArray, PoolsDict, SwapType);
 
         const bestSpotPrice = sor.getMarketSpotPrice(paths);
 
-        const eps: EffectivePrice[] = sor.processEpsOfInterestMultiHop(
+        const eps: Price[] = sor.processEpsOfInterestMultiHop(
             paths,
             SwapType,
             this.maxPools

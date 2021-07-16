@@ -73,7 +73,7 @@ export async function getCostOutputToken(
     GasPriceWei: BigNumber,
     SwapGasCost: BigNumber,
     Provider: BaseProvider,
-    ChainId: number = undefined
+    ChainId: number | undefined = undefined
 ): Promise<BigNumber> {
     if (!ChainId) {
         let network = await Provider.getNetwork();

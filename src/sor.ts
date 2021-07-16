@@ -14,9 +14,9 @@ import {
     Path,
     Swap,
     Price,
-    EffectivePrice,
     PoolDictionary,
     Pool,
+    PoolPairDataWithSportPrice,
 } from './types';
 import { MaxUint256 } from '@ethersproject/constants';
 
@@ -32,7 +32,7 @@ export function processPaths(
     pools: PoolDictionary,
     swapType: string
 ): Path[] {
-    let poolPairData = {};
+    let poolPairData: PoolPairDataWithSportPrice = {};
     paths.forEach(path => {
         let swaps: Swap[] = path.swaps;
         // Get and store PoolPairData for swaps in path as these are used across all following get functions
@@ -98,7 +98,7 @@ export function processPaths(
     });
 
     let sortedPaths = paths.sort((a, b) => {
-        return a.spotPrice.minus(b.spotPrice).toNumber();
+        return a.spotPrice!.minus(b.spotPrice!).toNumber();
     });
 
     return sortedPaths;
@@ -108,40 +108,39 @@ export function processEpsOfInterestMultiHop(
     sortedPaths: Path[],
     swapType: string,
     maxPools: number
-): EffectivePrice[] {
-
-    // Given sortedPaths, this function builds the list of prices of interest  
-    // wich is composed of all the spot prices of each of the paths and also 
-    // all the swap prices, i.e. prices where the chart of spot price after trade vs. 
-    // amount traded of any two pools cross. This means that up until that swap price 
+): Price[] {
+    // Given sortedPaths, this function builds the list of prices of interest
+    // wich is composed of all the spot prices of each of the paths and also
+    // all the swap prices, i.e. prices where the chart of spot price after trade vs.
+    // amount traded of any two pools cross. This means that up until that swap price
     // it's better to trade with one pool, but after that swap price it's better to trade with
-    // the other. 
+    // the other.
     let pricesOfInterest: Price[] = getPricesOfInterest(sortedPaths, swapType);
 
     // Sort all prices of interest in ascending order
     pricesOfInterest = pricesOfInterest.sort((a, b) => {
-        return a.price.minus(b.price).toNumber();
+        return a.price!.minus(b.price!).toNumber();
     });
 
-    // For each price of interest we calculate the list of best paths. 
-    // This list is built based on the information of prices of interest where 
-    // paths cross (i.e. one becomes better that the other). We only keep a list 
-    // of up to maxPools pathIds as we know we won't ever need more than that 
-    // since each path has at least one pool 
+    // For each price of interest we calculate the list of best paths.
+    // This list is built based on the information of prices of interest where
+    // paths cross (i.e. one becomes better that the other). We only keep a list
+    // of up to maxPools pathIds as we know we won't ever need more than that
+    // since each path has at least one pool
     pricesOfInterest = calculateBestPathIdsForPricesOfInterest(
         pricesOfInterest,
         maxPools
     );
 
-    // For each price of interest and list of best path ids, calculate how much 
+    // For each price of interest and list of best path ids, calculate how much
     // each of these paths would trade in order to get to that price of interest
     pricesOfInterest.forEach(poi => {
         let pathIds = poi.bestPathsIds;
         let price = poi.price;
         poi.amounts = getSwapAmountsForPriceOfInterest(
             sortedPaths,
-            pathIds,
-            price
+            pathIds!,
+            price!
         );
     });
 
@@ -173,27 +172,31 @@ export const smartOrderRouterMultiHopEpsOfInterest = (
     totalSwapAmount: BigNumber,
     maxPools: number,
     costReturnToken: BigNumber,
-    pricesOfInterest: EffectivePrice[]
+    pricesOfInterest: Price[]
 ): [Swap[][], BigNumber] => {
     let bestTotalReturn: BigNumber = new BigNumber(0);
     let bestTotalReturnConsideringFees: BigNumber = new BigNumber(0);
     let highestPoiNotEnough: boolean = true;
-    let pathIds, totalReturn, totalReturnConsideringFees;
-    let bestSwapAmounts = [],
-        bestPathIds,
-        swapAmounts;
+    let pathIds: string[] = [],
+        totalReturn,
+        totalReturnConsideringFees: BigNumber = new BigNumber(0);
+    let bestSwapAmounts: BigNumber[] = [],
+        bestPathIds: string[],
+        swapAmounts: BigNumber[] = [];
 
     let bmin = paths.length + 1;
     // First get the optimal totalReturn to trade 'totalSwapAmount' with
-    // one path only (b=1). Then increase the number of pools as long as  
-    // improvementCondition is true (see more information below) 
+    // one path only (b=1). Then increase the number of pools as long as
+    // improvementCondition is true (see more information below)
 
     for (let b = 1; b <= bmin; b++) {
         totalReturn = 0;
 
-        let priceBefore, swapAmountsPriceBefore, swapAmountsPriceAfter;
+        let priceBefore: Price,
+            swapAmountsPriceBefore: BigNumber[],
+            swapAmountsPriceAfter: BigNumber[];
 
-        // Sweep all pricesOfInterest until we reach the amount we aim for (totalSwapAmount) 
+        // Sweep all pricesOfInterest until we reach the amount we aim for (totalSwapAmount)
         for (let i = 0; i < pricesOfInterest.length; i++) {
             if (i === 0) {
                 priceBefore = pricesOfInterest[i];
@@ -201,17 +204,20 @@ export const smartOrderRouterMultiHopEpsOfInterest = (
             }
 
             let swapAmountsAfter = pricesOfInterest[i].amounts;
-            let totalInputAmountAfter = swapAmountsAfter
+            let totalInputAmountAfter = swapAmountsAfter!
                 .slice(0, b)
                 .reduce((a, b) => a.plus(b));
 
-            // If totalInputAmountAfter is greater than totalSwapAmount we know 
+            // If totalInputAmountAfter is greater than totalSwapAmount we know
             // we found a solution to trade, now all we need to do is interpolate
             // between swapAmountsPriceBefore and swapAmountsPriceAfter
             if (totalInputAmountAfter.isGreaterThan(totalSwapAmount)) {
-                pathIds = priceBefore.bestPathsIds.slice(0, b);
-                swapAmountsPriceBefore = priceBefore.amounts.slice(0, b);
-                swapAmountsPriceAfter = pricesOfInterest[i].amounts.slice(0, b);
+                pathIds = priceBefore!.bestPathsIds!.slice(0, b);
+                swapAmountsPriceBefore = priceBefore!.amounts!.slice(0, b);
+                swapAmountsPriceAfter = pricesOfInterest[i].amounts!.slice(
+                    0,
+                    b
+                );
 
                 swapAmounts = getExactSwapAmounts(
                     swapAmountsPriceBefore,
@@ -248,13 +254,13 @@ export const smartOrderRouterMultiHopEpsOfInterest = (
         pathIds.forEach((pathId, i) => {
             // Find path data
             const path = paths.find(p => p.id === pathId);
-            totalNumberOfPools += path.swaps.length;
+            totalNumberOfPools += path!.swaps.length;
         });
 
-        // improvementCondition is true if we are improving the totalReturn 
-        // Notice that totalReturn has to be maximized for 'swapExactIn' 
+        // improvementCondition is true if we are improving the totalReturn
+        // Notice that totalReturn has to be maximized for 'swapExactIn'
         // and MINIMIZED for 'swapExactOut'
-        // This is because for the case of 'swapExactOut', totalReturn means the 
+        // This is because for the case of 'swapExactOut', totalReturn means the
         // amount of tokenIn needed to buy totalSwapAmount of tokenOut
         let improvementCondition: boolean = false;
         if (totalNumberOfPools <= maxPools) {
@@ -407,19 +413,19 @@ export const smartOrderRouterMultiHopEpsOfInterest = (
     if (swaps.length > 0) {
         dust = totalSwapAmount.minus(totalSwapAmountWithRoundingErrors);
         if (swapType === 'swapExactIn') {
-            swaps[0][0].swapAmount = new BigNumber(swaps[0][0].swapAmount)
+            swaps[0][0].swapAmount = new BigNumber(swaps[0][0].swapAmount!)
                 .plus(dust)
                 .toString(); // Add dust to first swapExactIn
         } else {
             if (lenghtFirstPath == 1)
                 // First path is a direct path (only one pool)
-                swaps[0][0].swapAmount = new BigNumber(swaps[0][0].swapAmount)
+                swaps[0][0].swapAmount = new BigNumber(swaps[0][0].swapAmount!)
                     .plus(dust)
                     .toString();
             // Add dust to first swapExactOut
             // First path is a multihop path (two pools)
             else
-                swaps[0][1].swapAmount = new BigNumber(swaps[0][1].swapAmount)
+                swaps[0][1].swapAmount = new BigNumber(swaps[0][1].swapAmount!)
                     .plus(dust)
                     .toString(); // Add dust to second swapExactOut
         }
@@ -439,49 +445,49 @@ function getPricesOfInterest(sortedPaths: Path[], swapType: string): Price[] {
 
         // Get the max amount that can be traded for this path
         pi = {};
-        pi.price = path.spotPrice.plus(
-            bmul(bmul(path.limitAmount, path.slippage), path.spotPrice)
+        pi.price = path.spotPrice!.plus(
+            bmul(bmul(path.limitAmount!, path.slippage!), path.spotPrice!)
         );
         pi.maxAmount = path.id;
 
         // Add price of interest
         pricesOfInterest.push(pi);
 
-        // slippagePriceFactor is the slope of the chart for this path. 
-        // Slippage (SL) has to be multiplied by spotPrice (SP) because 
+        // slippagePriceFactor is the slope of the chart for this path.
+        // Slippage (SL) has to be multiplied by spotPrice (SP) because
         // we have defined the linearized spot price after trade (SPaT) as:
         // SPaT (A) = SP * (1 + SL * A)      so if we want the slope we do:
-        // SPaT (A) = SP + SL*SP * A         the slope is therefore SL * SP      
-        path.slippagePriceFactor = bmul(path.slippage, path.spotPrice);
+        // SPaT (A) = SP + SL*SP * A         the slope is therefore SL * SP
+        path.slippagePriceFactor = bmul(path.slippage!, path.spotPrice!);
 
         // Now we have to check if this path we just added will cross with other
-        // previously added paths. For that we need to run a for loop with all the 
+        // previously added paths. For that we need to run a for loop with all the
         // previous paths and analyse all the different possibilities of them crossing.
-        // A detailed explanation of each of the cases can be found here: 
+        // A detailed explanation of each of the cases can be found here:
         // https://drive.google.com/file/d/1vNWyfAMGtieWK6Vksj4oUJcOKF7FqanV/view
         for (let k = 0; k < i; k++) {
             let prevPath = sortedPaths[k];
             // let prevSlippageFactor = slippageFactors[prevPath.id];
             let prevSlippageFactor = prevPath.slippagePriceFactor;
 
-            // If the slippagePriceFactor of this path is less than that of the 
-            // previous than they will cross at amountCross: 
-            if (path.slippagePriceFactor.isLessThan(prevSlippageFactor)) {
+            // If the slippagePriceFactor of this path is less than that of the
+            // previous than they will cross at amountCross:
+            if (path.slippagePriceFactor.isLessThan(prevSlippageFactor!)) {
                 let amountCross = bdiv(
-                    path.spotPrice.minus(prevPath.spotPrice),
-                    prevSlippageFactor.minus(path.slippagePriceFactor)
+                    path.spotPrice!.minus(prevPath.spotPrice!),
+                    prevSlippageFactor!.minus(path.slippagePriceFactor)
                 );
 
                 // Check for case A
                 if (
-                    amountCross.isLessThan(path.limitAmount) &&
-                    amountCross.isLessThan(prevPath.limitAmount)
+                    amountCross.isLessThan(path.limitAmount!) &&
+                    amountCross.isLessThan(prevPath.limitAmount!)
                 ) {
                     let epiA: Price = {};
-                    epiA.price = path.spotPrice.plus(
+                    epiA.price = path.spotPrice!.plus(
                         bmul(amountCross, path.slippagePriceFactor)
                     );
-                    // Add price of interest with the information of the paths ids 
+                    // Add price of interest with the information of the paths ids
                     // that are crossing in the format [demoted path, promoted path],
                     // which means the first pathId is the one that's becoming worse after
                     // the cross, and the second path is becoming better.
@@ -491,12 +497,12 @@ function getPricesOfInterest(sortedPaths: Path[], swapType: string): Price[] {
 
                 // Check for case B
                 if (
-                    prevPath.limitAmount.isLessThan(path.limitAmount) &&
-                    prevPath.limitAmount.isLessThan(amountCross)
+                    prevPath.limitAmount!.isLessThan(path.limitAmount!) &&
+                    prevPath.limitAmount!.isLessThan(amountCross!)
                 ) {
                     let epiB: Price = {};
-                    epiB.price = path.spotPrice.plus(
-                        bmul(prevPath.limitAmount, path.slippagePriceFactor)
+                    epiB.price = path.spotPrice!.plus(
+                        bmul(prevPath.limitAmount!, path.slippagePriceFactor)
                     );
                     // Add cross information similarly to case A above
                     epiB.swap = [prevPath.id, path.id];
@@ -505,25 +511,25 @@ function getPricesOfInterest(sortedPaths: Path[], swapType: string): Price[] {
 
                 // Check for case C
                 if (
-                    path.limitAmount.isLessThan(prevPath.limitAmount) &&
-                    amountCross.isLessThan(path.limitAmount)
+                    path.limitAmount!.isLessThan(prevPath.limitAmount!) &&
+                    amountCross.isLessThan(path.limitAmount!)
                 ) {
                     let epiC: Price = {};
-                    epiC.price = prevPath.spotPrice.plus(
-                        bmul(path.limitAmount, prevSlippageFactor)
+                    epiC.price = prevPath.spotPrice!.plus(
+                        bmul(path.limitAmount!, prevSlippageFactor!)
                     );
                     // Add cross information similarly to case A above
                     epiC.swap = [path.id, prevPath.id];
                     pricesOfInterest.push(epiC);
                 }
             } else {
-                // This means the paths won't normally cross, so only case where 
-                // this could happen is if the limitAmount of the previous path 
+                // This means the paths won't normally cross, so only case where
+                // this could happen is if the limitAmount of the previous path
                 // is lower than that of this path
-                if (prevPath.limitAmount.isLessThan(path.limitAmount)) {
+                if (prevPath.limitAmount!.isLessThan(path.limitAmount!)) {
                     let epiD: Price = {};
-                    epiD.price = path.spotPrice.plus(
-                        bmul(prevPath.limitAmount, path.slippagePriceFactor)
+                    epiD.price = path.spotPrice!.plus(
+                        bmul(prevPath.limitAmount!, path.slippagePriceFactor)
                     );
                     // Add cross information similarly to case A above
                     epiD.swap = [prevPath.id, path.id];
@@ -589,17 +595,17 @@ function getSwapAmountsForPriceOfInterest(
     pathIds.forEach((bid, i) => {
         let path = paths.find(obj => {
             return obj.id === bid;
-        });
+        })!;
 
         let inputAmount = bdiv(
-            poi.minus(path.spotPrice),
-            path.slippagePriceFactor
+            poi.minus(path.spotPrice!),
+            path.slippagePriceFactor!
         );
 
         if (inputAmount.isNaN()) inputAmount = bnum(0);
 
-        if (path.limitAmount.isLessThan(inputAmount)) {
-            inputAmount = path.limitAmount;
+        if (path.limitAmount!.isLessThan(inputAmount)) {
+            inputAmount = path.limitAmount!;
         }
         swapAmounts.push(inputAmount);
     });
@@ -622,7 +628,7 @@ export const calcTotalReturn = (
             return obj.id === b;
         });
         totalReturn = totalReturn.plus(
-            getReturnAmountSwapPath(poolsClone, path, swapType, swapAmounts[i])
+            getReturnAmountSwapPath(poolsClone, path!, swapType, swapAmounts[i])
         );
     });
     return totalReturn;

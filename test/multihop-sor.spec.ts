@@ -26,13 +26,13 @@ const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'; // USDC lower case
 const MKR = '0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2'; // MKR lower case
 const OCEAN = '0x985dd3d42de1e256d09e1c10f112bccb8015ad41';
 
-let allPoolsCorrect;
+let allPoolsCorrect: any;
 
 describe('Tests Multihop SOR vs static allPools.json', () => {
     it('Saved pool check - without disabled filter', async () => {
         // Uses saved pools @25/05/20.
         assert.equal(allPools.pools.length, 64, 'Should be 64 pools');
-        let allTokensSet;
+        let allTokensSet: any;
         // Converts Subgraph string format to Wei/Bnum format
         [allTokensSet, allPoolsCorrect] = formatAndFilterPools(
             JSON.parse(JSON.stringify(allPools))
@@ -49,7 +49,7 @@ describe('Tests Multihop SOR vs static allPools.json', () => {
     it('Saved pool check - with disabled filter', async () => {
         // Uses saved pools @25/05/20.
         assert.equal(allPools.pools.length, 64, 'Should be 64 pools');
-        let allTokensSet;
+        let allTokensSet: any;
         // Converts Subgraph string format to Wei/Bnum format
         [allTokensSet, allPoolsCorrect] = formatAndFilterPools(
             JSON.parse(JSON.stringify(allPools)),

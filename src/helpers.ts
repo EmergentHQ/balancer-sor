@@ -7,6 +7,8 @@ import {
     PoolDictionary,
     Swap,
     DisabledOptions,
+    Pools,
+    PoolPairDataWithSportPrice,
 } from './types';
 import {
     BONE,
@@ -36,7 +38,7 @@ export function getLimitAmountSwapPath(
     pools: PoolDictionary,
     path: Path,
     swapType: string,
-    poolPairData: any
+    poolPairData: PoolPairDataWithSportPrice
 ): BigNumber {
     let swaps: Swap[] = path.swaps;
     if (swaps.length == 1) {
@@ -359,7 +361,7 @@ export function getReturnAmountSwap(
 
 // Updates the balance of a given token for a given pool passed as parameter
 export function updateTokenBalanceForPool(
-    pool: any,
+    pool: Pool,
     token: string,
     balance: BigNumber
 ): any {
@@ -372,7 +374,7 @@ export function updateTokenBalanceForPool(
 
     // Scale down back as balances are stored scaled down by the decimals
     let T = pool.tokens.find(t => t.address === token);
-    T.balance = balance;
+    T!.balance = balance;
     return pool;
 }
 
@@ -463,21 +465,21 @@ export const parsePoolPairData = (
         id: p.id,
         tokenIn: tokenIn,
         tokenOut: tokenOut,
-        decimalsIn: tI.decimals,
-        decimalsOut: tO.decimals,
-        balanceIn: bnum(tI.balance),
-        balanceOut: bnum(tO.balance),
-        weightIn: scale(bnum(tI.denormWeight).div(bnum(p.totalWeight)), 18),
-        weightOut: scale(bnum(tO.denormWeight).div(bnum(p.totalWeight)), 18),
+        decimalsIn: tI!.decimals,
+        decimalsOut: tO!.decimals,
+        balanceIn: bnum(tI!.balance),
+        balanceOut: bnum(tO!.balance),
+        weightIn: scale(bnum(tI!.denormWeight).div(bnum(p.totalWeight)), 18),
+        weightOut: scale(bnum(tO!.denormWeight).div(bnum(p.totalWeight)), 18),
         swapFee: bnum(p.swapFee),
     };
 
     return poolPairData;
 };
 
-function filterPoolsWithoutToken(pools, token) {
+function filterPoolsWithoutToken(pools: PoolDictionary, token: string) {
     let found;
-    let OutputPools = {};
+    let OutputPools: PoolDictionary = {};
     for (let i in pools) {
         found = false;
         for (let k = 0; k < pools[i].tokensList.length; k++) {
@@ -492,7 +494,7 @@ function filterPoolsWithoutToken(pools, token) {
     return OutputPools;
 }
 
-export const formatSubgraphPools = pools => {
+export const formatSubgraphPools = (pools: Pools) => {
     for (let pool of pools.pools) {
         pool.swapFee = scale(bnum(pool.swapFee), 18);
         pool.totalWeight = scale(bnum(pool.totalWeight), 18);
@@ -582,7 +584,7 @@ export function sortPoolsMostLiquid(
 
     for (let i = 0; i < hopTokens.length; i++) {
         let highestNormalizedLiquidityFirst = bnum(0); // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
-        let highestNormalizedLiquidityFirstPoolId; // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
+        let highestNormalizedLiquidityFirstPoolId = ''; // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
 
         for (let k in poolsTokenInNoTokenOut) {
             // If this pool has hopTokens[i] calculate its normalized liquidity
@@ -614,7 +616,7 @@ export function sortPoolsMostLiquid(
             poolsTokenInNoTokenOut[highestNormalizedLiquidityFirstPoolId];
 
         let highestNormalizedLiquidity = bnum(0); // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
-        let highestNormalizedLiquidityPoolId; // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
+        let highestNormalizedLiquidityPoolId = ''; // Aux variable to find pool with most liquidity for pair (tokenIn -> hopToken)
 
         for (let k in poolsTokenOutNoTokenIn) {
             // If this pool has hopTokens[i] calculate its normalized liquidity
@@ -651,14 +653,14 @@ export function sortPoolsMostLiquid(
 export function getMarketSpotPrice(paths: Path[]): BigNumber {
     if (paths.length === 0) return bnum(0);
 
-    let min = bnum(paths[0].slippage);
-    let marketSp = bnum(paths[0].spotPrice);
+    let min = bnum(paths[0].slippage!);
+    let marketSp = bnum(paths[0].spotPrice!);
 
     for (let i = 1; i < paths.length; i++) {
-        let value = bnum(paths[i].slippage);
+        let value = bnum(paths[i].slippage!);
         if (value.lt(min) || min.eq(0)) {
             min = value;
-            marketSp = bnum(paths[i].spotPrice);
+            marketSp = bnum(paths[i].spotPrice!);
         }
     }
 

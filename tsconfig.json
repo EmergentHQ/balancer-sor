@@ -3,19 +3,16 @@
         "files": true
     },
     "compilerOptions": {
-        "target": "es6",
+        "target": "es2018",
         "module": "commonjs",
         "sourceMap": true,
         "strict": true,
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "declaration": true,
-        "lib": ["es2017", "es2018.promise"],
-        "outDir": "./build/",
-        "noImplicitAny": false,
-        "baseUrl": "src",
-        "experimentalDecorators": true,
-        "strictNullChecks": false
+        "jsx": "react",
+        "lib": ["DOM", "ES2019"],
+        "outDir": "./build"
     },
     "include": ["src", "src/abi/*.json", "src/disabled-tokens.json"],
     "exclude": ["node_modules"]

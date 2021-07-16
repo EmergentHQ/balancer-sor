@@ -19,7 +19,7 @@ const MKR = '0xef13C0c8abcaf5767160018d268f9697aE4f5375'.toLowerCase();
 const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const yUSD = '0xb2fdd60ad80ca7ba89b9bab3b5336c2601c020b4';
 
-let allPoolsCorrect;
+let allPoolsCorrect: any;
 
 describe('Tests Multihop SOR vs static allPoolsDecimals.json', () => {
     it('Saved pool check - without disabled filter', async () => {

@@ -11,6 +11,13 @@ export interface PoolPairData {
     swapFee: BigNumber;
 }
 
+export interface PoolPairDataWithSportPrice {
+    [_: string]: {
+        poolPairData: PoolPairData;
+        sp: BigNumber;
+    };
+}
+
 export interface Path {
     id: string; // pool address if direct path, contactenation of pool addresses if multihop
     swaps: Swap[];
@@ -18,15 +25,6 @@ export interface Path {
     slippage?: BigNumber;
     limitAmount?: BigNumber;
     slippagePriceFactor?: BigNumber;
-}
-
-export interface EffectivePrice {
-    price?: BigNumber;
-    id?: string;
-    maxAmount?: string;
-    swap?: string[];
-    amounts?: BigNumber[];
-    bestPools?: string[];
 }
 
 export interface Price {
@@ -97,4 +95,21 @@ export interface DisabledOptions {
 export interface DisabledToken {
     address: string;
     symbol: string;
+}
+
+export interface TokenCost {
+    [token: string]: BigNumber;
+}
+
+export interface PoolsForPairsCache {
+    [pair: string]: Pools;
+}
+
+export interface ProcessedDataCache {
+    [_: string]: {
+        pools: PoolDictionary;
+        paths: Path[];
+        epsOfInterest: Price[];
+        marketSp: BigNumber;
+    };
 }
