@@ -92,7 +92,7 @@ export class SOR {
             this.isAllFetched = true;
 
             return true;
-        } catch (err) {
+        } catch (err: any) {
             // On error clear all caches and return false so user knows to try again.
             this.isAllFetched = false;
             this.onChainCache = { pools: [] };
@@ -401,7 +401,7 @@ export class SOR {
             ] = onChainPools;
 
             return true;
-        } catch (err) {
+        } catch (err: any) {
             console.error(`Error: fetchFilteredPairPools(): ${err.message}`);
             // Add to cache for future use
             this.poolsForPairsCache[this.createKey(TokenIn, TokenOut)] = {
